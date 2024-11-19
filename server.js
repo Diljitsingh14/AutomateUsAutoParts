@@ -7,7 +7,7 @@ const axios = require("axios");
 const { fetchPartDetails } = require("./fetchData");
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // Configure Multer to save files in the "uploads" directory
 const upload = multer({
@@ -108,5 +108,5 @@ app.post("/upload", upload.single("excelFile"), async (req, res) => {
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+  console.log(`Server is running on port${port}`);
 });
