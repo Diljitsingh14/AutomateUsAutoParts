@@ -6,14 +6,24 @@ import VehicleDB from "./src/db/serviceLine.js";
 configDotenv();
 
 const needs = {
-  makes: [19], // [19, 50, 45, 25, 105, 20, 32, 18, 1, 27, 31, 43],
-  years: [2017], //, 2018, 2019, 2020, 2021, 2022, 2023, 2024],
+  makes: [19, 50, 45, 25, 105, 20, 32, 18, 1, 27, 31, 43],
+  years: [2007, 2010, 2012, 2015], // [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024],
   types: [
     {
       Next: "/VehicleInfo?type=1",
       Id: 1,
       Value: "Car",
     },
+    // {
+    //   Next: "/VehicleInfo?type=3",
+    //   Id: 3,
+    //   Value: "Truck",
+    // },
+    // {
+    //   Next: "/VehicleInfo?type=4",
+    //   Id: 4,
+    //   Value: "Van",
+    // },
     // {
     //   Next: "/VehicleInfo?type=5",
     //   Id: 5,
@@ -278,20 +288,8 @@ const all_model = {
   ],
 };
 
-export const getModels = async (makeId, year, vehicle_type = 1) => {
-  const url = `${ENDPOINTS_URI.VehicleInfo}?type=${type}&year=${year}&make=${makeId}`;
-  const response = await axios.get(url);
-  return response.data["Models"];
-};
-
-export const getSubModel = async (nextURL = "") => {
-  const url = `${ENDPOINTS_URI.VehicleInfo}?${nextURL.split("?")[1]}`;
-  const response = await axios.get(url);
-  return response.data["SubModels"];
-};
-
 class Vehicle {
-  constructor() {
+  constructor(model = null) {
     this.steps = [
       "Years",
       "Makes",
@@ -306,20 +304,34 @@ class Vehicle {
     this.vehicles_res = [];
     this.res_data = [];
     this.vehicleDB = new VehicleDB();
+    this.specificModelOnly = model;
   }
 
   init = async () => {
     await this.vehicleDB.connectToDB();
   };
-  async seeder() {
+
+  async seeder(carMake = false) {
     await this.init();
+    let makes_to_fetch = [...needs.makes];
+    if (carMake) makes_to_fetch = [carMake];
+
     for (const type of needs.types) {
       for (const year of needs.years) {
-        for (const make of needs.makes) {
-          let url = `/VehicleInfo?type=${type.Id}&year=${year}&make=${make}`;
-          const res = await this.fetchServiceNo(url);
-          for (const model of res[this.steps[2]]) {
-            const res = await this.fetchServiceNo(model.Next);
+        for (const make of makes_to_fetch) {
+          let res;
+          if (this.specificModelOnly) {
+            res = [this.specificModelOnly];
+          } else {
+            let url = `/VehicleInfo?type=${type.Id}&year=${year}&make=${make}`;
+            res = (res = await this.fetchServiceNo(url))[this.steps[2]];
+          }
+          for (const model of res) {
+            let nextUrl = model.Next;
+            if (this.specificModelOnly) {
+              nextUrl = `/VehicleInfo?type=${type.Id}&year=${year}&make=${make}&model=${model.Id}`;
+            }
+            const res = await this.fetchServiceNo(nextUrl);
             for (const subModel of res[this.steps[3]]) {
               const res = await this.fetchServiceNo(subModel.Next);
               for (const bodyType of res[this.steps[4]]) {
@@ -329,12 +341,14 @@ class Vehicle {
                   for (const transmission of res[this.steps[6]]) {
                     const res = await this.fetchServiceNo(transmission.Next);
                     for (const drivetrain of res[this.steps[7]]) {
+                      console.log(
+                        `Fetching ${make} ${type.Value} ${year} ${model.Value} ${subModel.Value} ${engine.Value} ${transmission.Value}`
+                      );
                       const res = await this.fetchServiceNo(drivetrain.Next);
                       this.vehicles_res.push(res["Vehicle"]);
                       if (res["Vehicle"])
                         await this.vehicleDB.insertData(res["Vehicle"]);
                       this.res_data.push(res);
-                      console.log(res);
                     }
                   }
                 }
@@ -345,63 +359,6 @@ class Vehicle {
       }
     }
   }
-
-  // async seeder() {
-  //   await this.init();
-
-  //   for (const type of needs.types) {
-  //     for (const year of needs.years) {
-  //       for (const make of needs.makes) {
-  //         const url = `/VehicleInfo?type=${type.Id}&year=${year}&make=${make}`;
-  //         const modelsResponse = await this.fetchServiceNo(url);
-
-  //         for (const model of modelsResponse[this.steps[2]]) {
-  //           const subModelsResponse = await this.fetchServiceNo(model.Next);
-
-  //           for (const subModel of subModelsResponse[this.steps[3]]) {
-  //             const bodyStylesResponse = await this.fetchServiceNo(
-  //               subModel.Next
-  //             );
-
-  //             for (const bodyType of bodyStylesResponse[this.steps[4]]) {
-  //               const enginesResponse = await this.fetchServiceNo(
-  //                 bodyType.Next
-  //               );
-
-  //               for (const engine of enginesResponse[this.steps[5]]) {
-  //                 const transmissionsResponse = await this.fetchServiceNo(
-  //                   engine.Next
-  //                 );
-
-  //                 for (const transmission of transmissionsResponse[
-  //                   this.steps[6]
-  //                 ]) {
-  //                   const driveTrainsResponse = await this.fetchServiceNo(
-  //                     transmission.Next
-  //                   );
-
-  //                   for (const drivetrain of driveTrainsResponse[
-  //                     this.steps[7]
-  //                   ]) {
-  //                     const vehicle = drivetrain["Vehicle"];
-  //                     if (vehicle) {
-  //                       await this.vehicleDB.insertData(vehicle);
-  //                       this.vehicles_res.push(vehicle);
-  //                     }
-  //                     this.res_data.push(driveTrainsResponse);
-  //                     console.log(vehicle);
-  //                   }
-  //                 }
-  //               }
-  //             }
-  //           }
-  //         }
-  //       }
-  //     }
-  //   }
-
-  //   console.log("Seeding complete!");
-  // }
 
   fetchServiceNo = async (appended_url) => {
     // const url = `https://estimate.mymitchell.com/VehicleIdentificationService/8.0/VehicleInfo?type=1&year=2017&make=19&model=214&subModel=241&bodystyle=114&engine=88&transmission=19&drivetrain=6`;
@@ -429,13 +386,19 @@ class Vehicle {
   };
 }
 
-async function main() {
-  const new_vehicle = new Vehicle();
-  await new_vehicle.seeder();
+// Get Service line(service Bar code number) and saving to db
+async function seedServiceBarCodes() {
+  const new_vehicle = new Vehicle({
+    Next: "/VehicleInfo?type=1&year=2017&make=45&model=1400",
+    Id: 1400,
+    Value: "Yaris",
+  });
+  await new_vehicle.seeder(45);
   await new_vehicle.vehicleDB.closeConnection();
-  console.log("####ALL RES ###", new_vehicle.res_data);
-  console.log("####VEHICLE###", new_vehicle.vehicles_res);
+  // console.log("####ALL RES ###", new_vehicle.res_data);
+  // console.log("####VEHICLE###", new_vehicle.vehicles_res);
 }
-main();
 
-// export default Vehicle;
+// seedServiceBarCodes();
+
+export default Vehicle;
