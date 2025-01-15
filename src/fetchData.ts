@@ -1,7 +1,9 @@
-const axios = require("axios");
-require("dotenv").config();
+import axios from "axios";
+import { configDotenv } from "dotenv";
 
-const fetchPartDetails = async (partNumber) => {
+configDotenv();
+
+export const fetchPartDetails = async (partNumber: any) => {
   const url = `https://estimate.mymitchell.com/PartsSelectionService/7/SearchPart?country=US&language=ENG&make=0&partNumber=${partNumber}`;
 
   const idToken = process.env.ID_TOKEN;
@@ -14,7 +16,7 @@ const fetchPartDetails = async (partNumber) => {
     });
 
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error(
       "Error fetching part details:",
       error.response?.data || error.message
@@ -22,5 +24,3 @@ const fetchPartDetails = async (partNumber) => {
     throw error;
   }
 };
-
-module.exports = { fetchPartDetails };

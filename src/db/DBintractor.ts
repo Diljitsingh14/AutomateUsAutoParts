@@ -4,18 +4,22 @@ import {
   convertToExcel,
   getUniqueServiceLine,
   hasNulls,
-} from "../utility/helper.js";
-import { getPartsByServiceLine, savePartsToDB } from "../parts.js";
-import { builder, getPartByServiceLine } from "../../builderPartsByMake.js";
+} from "../utility/helper";
+import { getPartsByServiceLine, savePartsToDB } from "../parts";
+import { builder, getPartByServiceLine } from "../builderPartsByMake";
 
 config(); // Load environment variables from .env
 
-const uri = process.env.MONGO_URI;
+const uri = process.env.MONGO_URI || "";
 
 const databaseName = "AutoParts_1";
 
 // base query execution
-export async function executeQuery(collectionName, query, options = {}) {
+export async function executeQuery(
+  collectionName: any,
+  query: any,
+  options = {}
+) {
   const client = new MongoClient(uri);
 
   try {
@@ -32,7 +36,7 @@ export async function executeQuery(collectionName, query, options = {}) {
 
     // Return the query result
     return result;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error executing MongoDB query:", error.message);
     throw error;
   } finally {
@@ -44,7 +48,7 @@ export async function executeQuery(collectionName, query, options = {}) {
 
 // main extract function to get service line by diff params.
 export async function getServiceLinesByMake(
-  makeId,
+  makeId: string | number,
   year = "",
   type = "",
   from = "",
@@ -53,10 +57,10 @@ export async function getServiceLinesByMake(
   model = ""
 ) {
   const collectionName = "ServiceLine";
-  const query = { "Value.Make.Id": makeId };
+  const query: any = { "Value.Make.Id": makeId };
   if (year) {
     let more = false;
-    let y = {};
+    let y: Record<string, string> | string = {};
     if (from) {
       y["$gte"] = from;
       more = true;
@@ -83,14 +87,14 @@ export async function getServiceLinesByMake(
     const results = await executeQuery(collectionName, query);
     console.log(query);
     return results;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to fetch data:", error.message);
   }
 }
 
-export async function getServiceLinesByYear(year, op = "eq") {
+export async function getServiceLinesByYear(year: string, op = "eq") {
   const collectionName = "ServiceLine";
-  const query = {};
+  const query: any = {};
   switch (op) {
     case "eq": {
       query["Value.Year.Id"] = year;
@@ -114,14 +118,17 @@ export async function getServiceLinesByYear(year, op = "eq") {
     const results = await executeQuery(collectionName, query);
     console.log(query);
     return results;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to fetch data:", error.message);
   }
 }
 
-export async function getServiceLineResponse(id, makeId) {
+export async function getServiceLineResponse(
+  id: string | number,
+  makeId: string | number
+) {
   const collectionName = "ServiceResponse";
-  let query = {};
+  let query: any = {};
   if (id) {
     query["data.ServiceId"] = id;
   }
@@ -133,14 +140,14 @@ export async function getServiceLineResponse(id, makeId) {
     const results = await executeQuery(collectionName, query);
     console.log(query);
     return results;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to fetch data:", error.message);
   }
 }
 
-export async function getPartByPartNumber(partNumber) {
+export async function getPartByPartNumber(partNumber: string) {
   const collectionName = "ServiceResponse";
-  const query = {
+  const query: any = {
     "data.Categories.SubCategories.Parts.PartDetails.Part.Price.PartNumber":
       partNumber,
   };
@@ -148,7 +155,7 @@ export async function getPartByPartNumber(partNumber) {
   try {
     const results = await executeQuery(collectionName, query);
     console.log(query);
-    let parts = [];
+    let parts: any[] = [];
     if (results.length > 0) {
       for (const r of results) {
         const part = await getPartByServiceLine(partNumber, r);
@@ -156,19 +163,19 @@ export async function getPartByPartNumber(partNumber) {
       }
       return parts;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to fetch data:", error.message);
   }
 }
 
 (async () => {
-  const res = await getServiceLinesByMake(45);
+  const res: any = await getServiceLinesByMake(45);
   console.log(res.length);
   const filtered = await getUniqueServiceLine(res);
   const nulls = await hasNulls(res);
   console.log(filtered.length, nulls);
   let idx = 0;
-  let full_res = [];
+  let full_res: any[] = [];
   for (const item of filtered) {
     console.log(idx);
     console.log("fetching");

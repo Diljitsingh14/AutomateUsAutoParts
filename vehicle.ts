@@ -1,7 +1,7 @@
 import axios from "axios";
 import { configDotenv } from "dotenv";
-import { ENDPOINTS_URI } from "./src/constance.js";
-import VehicleDB from "./src/db/serviceLine.js";
+import { ENDPOINTS_URI } from "./src/constance";
+import VehicleDB from "./src/db/serviceLine";
 
 configDotenv();
 
@@ -289,7 +289,12 @@ const all_model = {
 };
 
 class Vehicle {
-  constructor(model = null) {
+  steps: string[];
+  vehicles_res: any[];
+  res_data: any[];
+  vehicleDB: VehicleDB;
+  specificModelOnly: null;
+  constructor(model: any | null) {
     this.steps = [
       "Years",
       "Makes",
@@ -311,7 +316,7 @@ class Vehicle {
     await this.vehicleDB.connectToDB();
   };
 
-  async seeder(carMake = false) {
+  async seeder(carMake = 0) {
     await this.init();
     let makes_to_fetch = [...needs.makes];
     if (carMake) makes_to_fetch = [carMake];
@@ -344,7 +349,8 @@ class Vehicle {
                       console.log(
                         `Fetching ${make} ${type.Value} ${year} ${model.Value} ${subModel.Value} ${engine.Value} ${transmission.Value}`
                       );
-                      const res = await this.fetchServiceNo(drivetrain.Next);
+                      const res: Record<string, any> =
+                        await this.fetchServiceNo(drivetrain.Next);
                       this.vehicles_res.push(res["Vehicle"]);
                       if (res["Vehicle"])
                         await this.vehicleDB.insertData(res["Vehicle"]);
