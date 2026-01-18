@@ -1,7 +1,7 @@
-const axios = require("axios");
-require("dotenv").config();
+import axios from "axios";
+import { configDotenv } from "dotenv";
 
-const fetchPartDetails = async (partNumber) => {
+export const fetchPartDetails = async (partNumber) => {
   const url = `https://estimate.mymitchell.com/PartsSelectionService/7/SearchPart?country=US&language=ENG&make=0&partNumber=${partNumber}`;
 
   const idToken = process.env.ID_TOKEN;
@@ -22,5 +22,3 @@ const fetchPartDetails = async (partNumber) => {
     throw error;
   }
 };
-
-module.exports = { fetchPartDetails };

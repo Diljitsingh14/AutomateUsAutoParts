@@ -20,6 +20,10 @@ export async function builder(serviceResponse, fullParts = false) {
       cat["SubCategories"].forEach((subCat) => {
         subCat["Parts"].forEach((parts) => {
           parts.PartDetails.forEach(({ Part, Description }) => {
+            if (!Part?.Price?.PartNumber) {
+              console.log("skipped");
+              return;
+            }
             if (fullParts) {
               const p = {
                 PreviousPrice: Part?.Price?.PreviousPrice,
@@ -96,6 +100,21 @@ export async function getPartByServiceLine(partnumber, serviceLine) {
 //   // const res = await getServiceLineResponse(911897);
 //   // const resBuilder = await builder(res[0].data);
 //   // convertToExcel(resBuilder, "toyota_86.xlsx");
+//   // const parts = await getPartByPartNumber("16360-F0300");
+//   // console.log(parts);
+//   // const res = await getServiceLineResponse(false, 45);
+//   // let parts = [];
+//   // for (const r of res) {
+//   //   const resBuilder = await builder(r.data);
+//   //   parts = [...parts, ...resBuilder];
+//   // }
+//   // convertToExcel(parts, "toyota.xlsx");
+// })();
+
+// (async () => {
+//   const res = await getServiceLineResponse(912643);
+//   // const resBuilder = await builder(res[0].data);
+//   // convertToExcel(resBuilder, "Kia-CARNIVAL_22-24.xlsx");
 //   // const parts = await getPartByPartNumber("16360-F0300");
 //   // console.log(parts);
 //   // const res = await getServiceLineResponse(false, 45);

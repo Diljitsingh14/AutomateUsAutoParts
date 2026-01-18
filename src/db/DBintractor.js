@@ -161,9 +161,25 @@ export async function getPartByPartNumber(partNumber) {
   }
 }
 
-(async () => {
-  const res = await getServiceLinesByMake(45);
-  console.log(res.length);
+export const downloadPartsByServiceId = async (id) => {
+  const response = await getPartsByServiceLine({
+    Value: { ServiceBarcode: id },
+  });
+  console.log("response for Id :", id, response);
+  if (response) {
+    const partXcel = await builder(response);
+    return partXcel;
+  }
+  return [];
+};
+
+export const downloadPartsByMake = async (
+  id,
+  saveParts = false,
+  fromUI = false
+) => {
+  const res = await getServiceLinesByMake(id);
+  console.log(res?.length);
   const filtered = await getUniqueServiceLine(res);
   const nulls = await hasNulls(res);
   console.log(filtered.length, nulls);
@@ -172,37 +188,94 @@ export async function getPartByPartNumber(partNumber) {
   for (const item of filtered) {
     console.log(idx);
     console.log("fetching");
-    const response = await getPartsByServiceLine(item);
-    const part = await builder(response, true);
-    const partXcel = await builder(response);
-    const vehicleInfo = {
-      serviceDescription: response.ServiceInformation.ServiceDescription,
-      country: "US",
-      ...item.Value,
-    };
-    await savePartsToDB(part, vehicleInfo);
-    idx++;
-    full_res = [...full_res, ...partXcel];
+    try {
+      const response = await getPartsByServiceLine(item);
+      if (response) {
+        const part = await builder(response, true);
+        const partXcel = await builder(response);
+        const vehicleInfo = {
+          serviceDescription: response.ServiceInformation.ServiceDescription,
+          country: "US",
+          ...item.Value,
+        };
+        if (saveParts) await savePartsToDB(part, vehicleInfo);
+        idx++;
+        full_res = [...full_res, ...partXcel];
+      }
+    } catch (error) {
+      console.error("Failed to fetch data:", error.message);
+    }
   }
-  convertToExcel(full_res, "toyota_US.xlsx");
-})();
+  if (fromUI) return full_res;
+  convertToExcel(full_res, "Kia.xlsx");
+};
+
+async function removeDuplicateVehicleIds() {
+  const client = new MongoClient(uri);
+
+  try {
+    await client.connect();
+    const db = client.db("AutoParts_1");
+    const collection = db.collection("ServiceResponseFiltered");
+
+    // Find duplicates
+    const duplicates = await collection
+      .aggregate([
+        {
+          $group: {
+            _id: "$vehicle.Id", // Group by vehicle.Id
+            count: { $sum: 1 }, // Count occurrences
+            ids: { $push: "$_id" }, // Collect all _id values
+          },
+        },
+        {
+          $match: {
+            count: { $gt: 1 }, // Only groups with more than one document
+          },
+        },
+      ])
+      .toArray();
+
+    console.log("duplicates", duplicates[0]);
+
+    for (const group of duplicates) {
+      const idsToDelete = group.ids.slice(1); // Exclude the first ID
+      await collection.deleteMany({ _id: { $in: idsToDelete } });
+    }
+
+    console.log("Duplicate vehicle.Id documents removed.");
+  } catch (err) {
+    console.error("Error removing duplicates:", err);
+  } finally {
+    await client.close();
+  }
+}
+
+// removeDuplicateVehicleIds();
+
+// downloadPartsByMake(id=19);
 
 // (async () => {
-//   const res = await getServiceLinesByMake(25);
+//   const res = await getServiceLinesByMake(50, "", 4, 2022, 2024, "", 3191);
+//   // const res = await getServiceLinesByMake(19);
 //   console.log(res.length);
 //   const filtered = await getUniqueServiceLine(res);
 //   const nulls = await hasNulls(res);
 //   let idx = 0;
+//   let full = [];
 //   for (const item of filtered) {
 //     console.log(idx);
-//     if (idx == 0) {
+//     if (idx == -1) {
 //       idx++;
 //       continue;
 //     } else {
 //       console.log("fetching");
-//       await getPartsByServiceLine(item);
+//       const data = await getPartsByServiceLine(item);
+//       const partXcel = await builder(data);
+//       full = [...full, ...partXcel];
 //     }
 //     idx++;
 //   }
+//   convertToExcel(full, "Kia-CARNIVAL_22-24-1.xlsx");
 //   console.log(filtered.length, nulls);
 // })();

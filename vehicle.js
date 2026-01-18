@@ -6,33 +6,38 @@ import VehicleDB from "./src/db/serviceLine.js";
 configDotenv();
 
 const needs = {
-  makes: [19, 50, 45, 25, 105, 20, 32, 18, 1, 27, 31, 43],
-  years: [2007, 2010, 2012, 2015], // [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024],
+  makes: [38], //[18, 1, 27, 31, 43, 128], //[19, 50, 45, 25, 105, 20, 32, 18, 1, 27, 31, 43, 128],
+  years:  [2007,2008,2009, 2010,2011, 2012,2013,2014, 2015,2016 ,2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024,2025],
   types: [
     {
       Next: "/VehicleInfo?type=1",
       Id: 1,
       Value: "Car",
     },
-    // {
-    //   Next: "/VehicleInfo?type=3",
-    //   Id: 3,
-    //   Value: "Truck",
-    // },
-    // {
-    //   Next: "/VehicleInfo?type=4",
-    //   Id: 4,
-    //   Value: "Van",
-    // },
-    // {
-    //   Next: "/VehicleInfo?type=5",
-    //   Id: 5,
-    //   Value: "SUV",
-    // },
+    {
+      Next: "/VehicleInfo?type=3",
+      Id: 3,
+      Value: "Truck",
+    },
+    {
+      Next: "/VehicleInfo?type=4",
+      Id: 4,
+      Value: "Van",
+    },
+    {
+      Next: "/VehicleInfo?type=5",
+      Id: 5,
+      Value: "SUV",
+    },
+    {
+      Next: "/VehicleInfo?type=50",
+      Id: 50,
+      Value: "Generic Vehicle",
+    },
   ],
 };
 
-const all_makes = [
+export const all_makes = [
   {
     Next: "/VehicleInfo?type=1&year=2015&make=1",
     Id: 1,
@@ -104,6 +109,11 @@ const all_makes = [
     Value: "Ford",
   },
   {
+    Next: "/VehicleInfo?type=1&year=2015&make=128",
+    Id: 128,
+    Value: "Genesis",
+  },
+  {
     Next: "/VehicleInfo?type=1&year=2015&make=18",
     Id: 18,
     Value: "Honda",
@@ -132,6 +142,11 @@ const all_makes = [
     Next: "/VehicleInfo?type=1&year=2015&make=101",
     Id: 101,
     Value: "Lamborghini",
+  },
+  {
+    Next: "/VehicleInfo?type=5&year=2020&make=38",
+    Id: 38,
+    Value: "Land Rover",
   },
   {
     Next: "/VehicleInfo?type=1&year=2015&make=25",
@@ -388,17 +403,32 @@ class Vehicle {
 
 // Get Service line(service Bar code number) and saving to db
 async function seedServiceBarCodes() {
-  const new_vehicle = new Vehicle({
-    Next: "/VehicleInfo?type=1&year=2017&make=45&model=1400",
-    Id: 1400,
-    Value: "Yaris",
-  });
-  await new_vehicle.seeder(45);
+  // const new_vehicle = new Vehicle({
+  //   Next: "/VehicleInfo?type=1&year=2017&make=45&model=1400",
+  //   Id: 1400,
+  //   Value: "Yaris",
+  // });
+  const new_vehicle = new Vehicle();
+
+  await new_vehicle.seeder();
   await new_vehicle.vehicleDB.closeConnection();
   // console.log("####ALL RES ###", new_vehicle.res_data);
   // console.log("####VEHICLE###", new_vehicle.vehicles_res);
 }
 
 // seedServiceBarCodes();
+
+// async function fetchAllBefore2017() {
+//   const new_vehicle = new Vehicle();
+//   await new_vehicle.seeder();
+//   await new_vehicle.vehicleDB.closeConnection();
+// }
+// fetchAllBefore2017();
+
+async function fetchGV60() {
+  const new_vehicle = new Vehicle();
+  await new_vehicle.seeder();
+  await new_vehicle.vehicleDB.closeConnection();
+}
 
 export default Vehicle;
