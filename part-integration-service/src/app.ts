@@ -8,6 +8,7 @@ import { downloadPartsByMake, downloadPartsByServiceId } from "./db/intractor";
 import { convertToExcel } from "./utils/helper";
 import fs from "fs";
 import { all_makes } from "./constants/makes";
+import { shopifyClient } from "./shopify/shopifyClient";
 
 dotenv.config();
 
@@ -31,6 +32,131 @@ const upload = multer({
 // health check
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
+});
+
+// ------------------------------------------------------------------
+// Shopify Test Interface
+// ------------------------------------------------------------------
+app.get("/shopify/test", (_req: Request, res: Response) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Shopify Integration Test</title>
+        <style>
+            body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+            button { padding: 10px 20px; margin: 10px 5px; cursor: pointer; background: #5c6ac4; color: white; border: none; border-radius: 4px; }
+            button:hover { background: #4a5ab3; }
+            .result { margin-top: 20px; padding: 15px; background: #f4f6f8; border-radius: 4px; white-space: pre-wrap; }
+            .error { background: #ffebe9; color: #bf0711; }
+            .success { background: #e3f1df; color: #108043; }
+        </style>
+    </head>
+    <body>
+        <h1>Shopify Integration Test</h1>
+        <div>
+            <button onclick="fetchProducts()">Fetch Products</button>
+            <button onclick="createProduct()">Create Dummy Product</button>
+        </div>
+        <div id="result" class="result"></div>
+
+        <script>
+            const resultDiv = document.getElementById('result');
+
+            async function fetchProducts() {
+                resultDiv.textContent = 'Loading...';
+                resultDiv.className = 'result';
+                try {
+                    const response = await fetch('/shopify/products');
+                    const data = await response.json();
+                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                    resultDiv.className = 'result success';
+                } catch (error) {
+                    resultDiv.textContent = 'Error: ' + error.message;
+                    resultDiv.className = 'result error';
+                }
+            }
+
+            async function createProduct() {
+                resultDiv.textContent = 'Creating product...';
+                resultDiv.className = 'result';
+                try {
+                    const response = await fetch('/shopify/products', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const data = await response.json();
+                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                    resultDiv.className = 'result success';
+                } catch (error) {
+                    resultDiv.textContent = 'Error: ' + error.message;
+                    resultDiv.className = 'result error';
+                }
+            }
+        </script>
+    </body>
+    </html>
+  `);
+});
+
+// ------------------------------------------------------------------
+// Fetch Shopify Products (GET)
+// ------------------------------------------------------------------
+app.get("/shopify/products", async (_req: Request, res: Response) => {
+  try {
+    const response = await shopifyClient.get("/products.json?limit=5");
+    res.status(200).json({
+      success: true,
+      count: response.data.products.length,
+      products: response.data.products
+    });
+  } catch (error: any) {
+    console.error("Error fetching products:", error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      error: error.response?.data || error.message
+    });
+  }
+});
+
+// ------------------------------------------------------------------
+// Create Dummy Product (POST)
+// ------------------------------------------------------------------
+app.post("/shopify/products", async (_req: Request, res: Response) => {
+  const dummyProduct = {
+    product: {
+      title: `Test Auto Part - ${Date.now()}`,
+      body_html: "<strong>Test product for integration testing</strong>",
+      vendor: "AutoParts Test",
+      product_type: "Auto Parts",
+      tags: ["test", "auto-parts"],
+      variants: [
+        {
+          price: "29.99",
+          sku: `TEST-${Date.now()}`,
+          inventory_quantity: 10,
+          inventory_management: "shopify"
+        }
+      ]
+    }
+  };
+
+  try {
+    const response = await shopifyClient.post("/products.json", dummyProduct);
+    res.status(201).json({
+      success: true,
+      message: "Product created successfully",
+      product: response.data.product
+    });
+  } catch (error: any) {
+    console.error("Error creating product:", error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      error: error.response?.data || error.message
+    });
+  }
 });
 
 // ------------------------------------------------------------------
