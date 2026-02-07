@@ -9,6 +9,7 @@ import { convertToExcel } from "./utils/helper";
 import fs from "fs";
 import { all_makes } from "./constants/makes";
 import { shopifyClient } from "./shopify/shopifyClient";
+import axios from "axios";
 
 dotenv.config();
 
@@ -32,6 +33,51 @@ const upload = multer({
 // health check
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
+});
+
+// ------------------------------------------------------------------
+// Shopify OAuth Routes
+// ------------------------------------------------------------------
+app.get("/shopify/install", (_req: Request, res: Response) => {
+  const shop = process.env.SHOPIFY_STORE_DOMAIN;
+  const clientId = process.env.SHOPIFY_CLIENT_ID;
+  const redirectUri = `${process.env.NGROK_URL}/shopify/callback`;
+  const scopes = "write_products,read_products,write_inventory,read_inventory";
+
+  const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${clientId}&scope=${scopes}&redirect_uri=${redirectUri}`;
+  
+  res.redirect(installUrl);
+});
+
+app.get("/shopify/callback", async (req: Request, res: Response) => {
+  const { code } = req.query;
+  
+  try {
+    const tokenResponse = await axios.post(
+      `https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/oauth/access_token`,
+      {
+        client_id: process.env.SHOPIFY_CLIENT_ID,
+        client_secret: process.env.SHOPIFY_CLIENT_SECRET,
+        code
+      }
+    );
+
+    const accessToken = tokenResponse.data.access_token;
+    
+    res.send(`
+      <html>
+        <head><title>Success!</title></head>
+        <body style="font-family: Arial; padding: 50px;">
+          <h1 style="color: green;">✅ Success!</h1>
+          <p>Copy this token to your .env file:</p>
+          <pre style="background: #f4f4f4; padding: 20px; border-radius: 5px; font-size: 14px;">SHOPIFY_ACCESS_TOKEN=${accessToken}</pre>
+          <p>Then restart your server and test at <a href="/shopify/test">/shopify/test</a></p>
+        </body>
+      </html>
+    `);
+  } catch (error: any) {
+    res.status(500).send(`<h1>Error</h1><pre>${JSON.stringify(error.response?.data || error.message, null, 2)}</pre>`);
+  }
 });
 
 // ------------------------------------------------------------------
