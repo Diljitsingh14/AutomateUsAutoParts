@@ -60,7 +60,7 @@ export default function Hero() {
             className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed"
           >
             Streamline your auto parts management with intelligent data processing, real-time MSRP updates, 
-            and seamless Shopify integration. Designed for modern auto parts suppliers.
+            and seamless Shopify integration. Shop quality parts at competitive prices.
           </motion.p>
 
           {/* CTA Buttons */}
@@ -68,13 +68,13 @@ export default function Hero() {
             variants={itemVariants}
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12"
           >
-            <Link href="/upload">
+            <Link href="/products">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-semibold flex items-center space-x-2 hover:shadow-lg transition shadow-md"
               >
-                <span>Start Now</span>
+                <span>Shop Now</span>
                 <ArrowRight size={20} />
               </motion.button>
             </Link>

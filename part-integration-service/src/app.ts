@@ -49,6 +49,148 @@ app.get("/health", (_req, res) => {
 });
 
 // ------------------------------------------------------------------
+// E-commerce API: Get All Products with Search & Filters
+// ------------------------------------------------------------------
+app.get("/api/products", async (req: Request, res: Response) => {
+  try {
+    const { search, minPrice, maxPrice, limit = 50 } = req.query;
+    
+    // Fetch products from Shopify
+    const response = await shopifyClient.get(`/products.json?limit=${limit}`);
+    let products = response.data.products;
+
+    // Apply search filter
+    if (search) {
+      const searchLower = (search as string).toLowerCase();
+      products = products.filter((product: any) =>
+        product.title.toLowerCase().includes(searchLower) ||
+        product.body_html?.toLowerCase().includes(searchLower) ||
+        (typeof product.tags === "string"
+          ? product.tags
+              .split(",")
+              .map((tag: string) => tag.trim())
+              .filter(Boolean)
+              .some((tag: string) => tag.toLowerCase().includes(searchLower))
+          : Array.isArray(product.tags)
+          ? product.tags.some((tag: string) => tag.toLowerCase().includes(searchLower))
+          : false)
+      );
+    }
+
+    // Apply price filter
+    if (minPrice || maxPrice) {
+      products = products.filter((product: any) => {
+        const price = parseFloat(product.variants[0]?.price || "0");
+        const min = minPrice ? parseFloat(minPrice as string) : 0;
+        const max = maxPrice ? parseFloat(maxPrice as string) : Infinity;
+        return price >= min && price <= max;
+      });
+    }
+
+    const normalizedProducts = products.map((product: any) => {
+      const tags = typeof product.tags === "string"
+        ? product.tags
+            .split(",")
+            .map((tag: string) => tag.trim())
+            .filter(Boolean)
+        : Array.isArray(product.tags)
+        ? product.tags
+        : [];
+
+      const rawImages = Array.isArray(product.images) ? product.images : [];
+      const images = rawImages
+        .map((img: any) => (typeof img?.src === "string" ? img.src : ""))
+        .filter(Boolean)
+        .map((src: string) => (src.startsWith("//") ? `https:${src}` : src));
+
+      const heroImage = images[0]
+        || (typeof product.image?.src === "string" ? (product.image.src.startsWith("//") ? `https:${product.image.src}` : product.image.src) : null);
+
+      return {
+        id: product.id,
+        title: product.title,
+        description: product.body_html,
+        price: product.variants[0]?.price || "0",
+        image: heroImage,
+        images,
+        vendor: product.vendor,
+        productType: product.product_type,
+        tags,
+        variants: product.variants || [],
+        createdAt: product.created_at,
+        updatedAt: product.updated_at
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      count: normalizedProducts.length,
+      products: normalizedProducts
+    });
+  } catch (error: any) {
+    console.error("Error fetching products:", error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      error: error.response?.data || error.message
+    });
+  }
+});
+
+// ------------------------------------------------------------------
+// E-commerce API: Get Single Product by ID
+// ------------------------------------------------------------------
+app.get("/api/products/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const response = await shopifyClient.get(`/products/${id}.json`);
+    const product = response.data.product;
+
+    const tags = typeof product.tags === "string"
+      ? product.tags
+          .split(",")
+          .map((tag: string) => tag.trim())
+          .filter(Boolean)
+      : Array.isArray(product.tags)
+      ? product.tags
+      : [];
+
+    const rawImages = Array.isArray(product.images) ? product.images : [];
+    const images = rawImages
+      .map((img: any) => (typeof img?.src === "string" ? img.src : ""))
+      .filter(Boolean)
+      .map((src: string) => (src.startsWith("//") ? `https:${src}` : src));
+
+    const heroImage = images[0]
+      || (typeof product.image?.src === "string" ? (product.image.src.startsWith("//") ? `https:${product.image.src}` : product.image.src) : null);
+
+    res.status(200).json({
+      success: true,
+      product: {
+        id: product.id,
+        title: product.title,
+        description: product.body_html,
+        price: product.variants[0]?.price || "0",
+        image: heroImage,
+        images,
+        vendor: product.vendor,
+        productType: product.product_type,
+        tags,
+        variants: product.variants || [],
+        options: product.options || [],
+        createdAt: product.created_at,
+        updatedAt: product.updated_at
+      }
+    });
+  } catch (error: any) {
+    console.error("Error fetching product:", error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      error: error.response?.data || error.message
+    });
+  }
+});
+
+// ------------------------------------------------------------------
 // Test Shopify Service Utility (Direct Function Calls)
 // ------------------------------------------------------------------
 app.get("/shopify/test-utility", async (_req: Request, res: Response) => {
